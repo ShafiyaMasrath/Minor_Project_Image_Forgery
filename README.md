@@ -1,52 +1,144 @@
-# Image Forgery Detector — Web App
+# Image Forgery Detection and Classification Web Application
 
-## Folder Structure
+A Flask-based web application that detects whether an image is authentic or forged and, if forged, classifies the forgery type.
 
-```
+## Features
+
+- Binary classification: Authentic vs Forged
+- Forgery type classification:
+  - Copy-Move Forgery
+  - Splicing Forgery
+- Confidence score for predictions
+- Inference time measurement
+- Simple web interface using Flask
+
+---
+
+## Project Structure
+
+```text
 forgery_site/
+│
 ├── app.py
 ├── requirements.txt
 ├── README.md
+├── .gitignore
+│
 ├── models/
-│   ├── best_forgery_v5.keras           ← your Phase 2 model (91.15%)
-│   └── best_forgery_detector_v2.keras  ← your type classification model
+│   └── (Place trained model files here)
+│
 └── templates/
     └── index.html
 ```
 
-## Setup (Run Once)
+---
 
-### 1. Install dependencies
+## Model Files
+
+The trained model files are not included in this repository because of GitHub file size limitations.
+
+Place the following files inside the `models/` directory before running the application:
+
+```text
+models/
+├── best_forgery_v5.keras
+└── best_forgery_detector_v2.keras
+```
+
+You can download the trained models from:
+
+https://drive.google.com/drive/folders/1P82NeNlMJCl-Bl7gEJ19S9P4B2XCJFgI?usp=sharing
+
+---
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/ShafiyaMasrath/Minor_Project_Image_Forgery.git
+cd Minor_Project_Image_Forgery
+```
+
+### 2. Install dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Copy your models from Google Drive
-Download these two files from your Google Drive and place them in the `models/` folder:
-- `best_forgery_v5.keras`
-- `best_forgery_detector_v2.keras`
+### 3. Add model files
 
-### 3. Run the server
+Download the trained `.keras` files and place them inside the `models/` folder.
+
+### 4. Run the application
+
 ```bash
 python app.py
 ```
 
-### 4. Open in browser
-```
+---
+
+## Usage
+
+1. Open your browser.
+2. Navigate to:
+
+```text
 http://localhost:5000
 ```
 
-## How it works
+3. Upload an image.
+4. Click **Analyse Image**.
+5. View:
+   - Authenticity prediction
+   - Confidence score
+   - Forgery type (if forged)
+   - Inference time
 
-1. Upload any image (JPG, PNG, BMP, TIFF)
-2. Click "Analyse Image"
-3. Results show:
-   - **Verdict**: Authentic or Forged
-   - **Confidence**: How sure the model is (%)
-   - **Forgery Type**: Copy-Move or Splicing (only shown if forged)
-   - **Inference Time**: How long it took in milliseconds
+---
 
-## Notes
-- First prediction is slow (~5–10s) because TF warms up the model
-- Subsequent predictions are much faster (~1–3s)
-- Works best on JPEG images (same compression format as training data)
+## Supported Image Formats
+
+- JPG
+- JPEG
+- PNG
+- BMP
+- TIFF
+
+---
+
+## Technology Stack
+
+- Python
+- TensorFlow / Keras
+- Flask
+- NumPy
+- Pillow
+
+---
+
+## Performance
+
+### Binary Forgery Detection Model
+- Accuracy: 91.15%
+
+### Forgery Type Classification Model
+- Classes:
+  - Copy-Move
+  - Splicing
+
+---
+
+## Future Improvements
+
+- Forgery localization using segmentation masks
+- Attention-based architectures
+- Explainable AI visualizations
+- Multi-dataset evaluation
+- Cloud deployment
+
+---
+
+## Author
+
+**Shafiya Masrath**
