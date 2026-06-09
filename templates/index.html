@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForgeCheck — Image Authenticity Detector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Epilogue:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f7f6f3;
+      --white:     #ffffff;
+      --ink:       #111110;
+      --ink2:      #3a3a38;
+      --muted:     #9e9e9a;
+      --border:    #e4e3de;
+      --red:       #e5352b;
+      --red-soft:  #fef2f1;
+      --red-mid:   #fcd5d3;
+      --green:     #1a9e5a;
+      --green-sf:  #f0faf5;
+      --green-md:  #b8e8cf;
+      --amber:     #d97706;
+      --shadow:    0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Epilogue', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 52px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 32px; height: 32px;
+      background: var(--ink);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .brand-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.01em;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .dot-green {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* Hero */
+    .hero { margin-bottom: 40px; }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 10px;
+    }
+
+    .hero h1 em { font-style: normal; color: var(--red); }
+
+    .hero p {
+      font-size: 0.95rem;
+      color: var(--ink2);
+      font-weight: 300;
+      max-width: 460px;
+    }
+
+    /* Upload card */
+    .upload-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+      transition: box-shadow 0.2s;
+    }
+
+    .upload-card:hover { box-shadow: var(--shadow-lg); }
+
+    .drop-zone {
+      padding: 56px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over { background: #f3f1ff; }
+
+    .drop-icon {
+      width: 56px; height: 56px;
+      margin: 0 auto 16px;
+      background: var(--bg);
+      border: 1.5px dashed var(--border);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      transition: all 0.18s;
+    }
+
+    .drop-zone:hover .drop-icon,
+    .drop-zone.drag-over .drop-icon {
+      background: #ede9ff;
+      border-color: #9b8fef;
+    }
+
+    .drop-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .drop-title span { color: #6d5de6; }
+    .drop-sub { font-size: 0.78rem; color: var(--muted); }
+    #fileInput { display: none; }
+
+    /* Preview strip */
+    .preview-strip {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .preview-strip.show { display: flex; }
+
+    .preview-thumb {
+      width: 52px; height: 52px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .preview-meta { flex: 1; min-width: 0; }
+
+    .preview-name {
+      font-size: 0.82rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preview-size { font-size: 0.73rem; color: var(--muted); }
+
+    .btn-clear {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: 'Epilogue', sans-serif;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+    /* Analyse button */
+    .btn-analyse {
+      width: 100%;
+      padding: 16px;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .btn-analyse:hover:not(:disabled) { background: #222; }
+    .btn-analyse:active:not(:disabled) { transform: scale(0.99); }
+    .btn-analyse:disabled { opacity: 0.28; cursor: not-allowed; }
+
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      display: none;
+    }
+
+    .btn-analyse.loading .spinner { display: block; }
+    .btn-analyse.loading .btn-txt  { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error-box {
+      display: none;
+      background: var(--red-soft);
+      border: 1px solid var(--red-mid);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 0.85rem;
+      color: var(--red);
+      margin-bottom: 16px;
+    }
+
+    .error-box.show { display: block; }
+
+    /* Results */
+    .results { display: none; }
+    .results.show { display: block; animation: fadeUp 0.35s ease; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Side-by-side images */
+    .images-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .img-panel {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .img-panel-hdr {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+    }
+
+    .panel-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+    .img-panel img {
+      width: 100%;
+      height: 250px;
+      object-fit: contain;
+      background: #f0ede8;
+      display: block;
+    }
+
+    /* Verdict */
+    .verdict-card {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      border-radius: 16px;
+      padding: 22px 24px;
+      margin-bottom: 16px;
+      border: 1.5px solid;
+    }
+
+    .verdict-card.authentic { background: var(--green-sf); border-color: var(--green-md); }
+    .verdict-card.forged    { background: var(--red-soft);  border-color: var(--red-mid); }
+
+    .v-emoji { font-size: 2rem; flex-shrink: 0; line-height: 1; }
+
+    .v-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .authentic .v-title { color: var(--green); }
+    .forged    .v-title { color: var(--red); }
+    .v-sub { font-size: 0.85rem; color: var(--ink2); font-weight: 300; }
+
+    /* Stats */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat-box {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .s-val {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .s-val.green { color: var(--green); }
+    .s-val.red   { color: var(--red); }
+    .s-val.amber { color: var(--amber); }
+    .s-val.ink   { color: var(--ink); }
+
+    .s-key {
+      font-size: 0.71rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    @media (max-width: 580px) {
+      .images-row { grid-template-columns: 1fr; }
+      .stats-row  { grid-template-columns: repeat(2, 1fr); }
+      .page       { padding: 28px 16px 60px; }
+      header      { margin-bottom: 32px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">🔍</div>
+      <span class="brand-name">ForgeCheck</span>
+    </div>
+    <div class="status-pill">
+      <div class="dot-green"></div>
+      Ready
+    </div>
+  </header>
+
+  <div class="hero">
+    <h1>Is your image <em>real?</em></h1>
+    <p>Upload any photo to detect tampering and see exactly where the image was altered.</p>
+  </div>
+
+  <div class="upload-card">
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-icon">🖼</div>
+      <p class="drop-title"><span>Click to upload</span> or drag & drop</p>
+      <p class="drop-sub">JPG · PNG · BMP · TIFF</p>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+    <div class="preview-strip" id="previewStrip">
+      <img class="preview-thumb" id="previewThumb" src="" alt="">
+      <div class="preview-meta">
+        <div class="preview-name" id="previewName">—</div>
+        <div class="preview-size" id="previewSize">—</div>
+      </div>
+      <button class="btn-clear" id="clearBtn">✕ Remove</button>
+    </div>
+  </div>
+
+  <button class="btn-analyse" id="analyseBtn" disabled>
+    <div class="spinner"></div>
+    <span class="btn-txt">Analyse Image</span>
+  </button>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="results" id="results">
+    <div class="images-row">
+      <div class="img-panel">
+        <div class="img-panel-hdr">
+          <div class="panel-dot" style="background:var(--muted)"></div>
+          Original
+        </div>
+        <img id="imgOrig" src="" alt="Original">
+      </div>
+      <div class="img-panel">
+        <div class="img-panel-hdr">
+          <div class="panel-dot" id="rightDot" style="background:var(--muted)"></div>
+          <span id="rightLabel">Analysis</span>
+        </div>
+        <img id="imgAnalysis" src="" alt="Analysis">
+      </div>
+    </div>
+
+    <div class="verdict-card" id="vCard">
+      <div class="v-emoji" id="vEmoji">—</div>
+      <div>
+        <div class="v-title" id="vTitle">—</div>
+        <div class="v-sub"   id="vSub">—</div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="s-val" id="sConf">—</div>
+        <div class="s-key">Confidence</div>
+      </div>
+      <div class="stat-box">
+        <div class="s-val" id="sType">—</div>
+        <div class="s-key">Type</div>
+      </div>
+      <div class="stat-box">
+        <div class="s-val ink" id="sTime">—</div>
+        <div class="s-key">Inference Time</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const dropZone     = document.getElementById('dropZone');
+  const fileInput    = document.getElementById('fileInput');
+  const previewStrip = document.getElementById('previewStrip');
+  const previewThumb = document.getElementById('previewThumb');
+  const previewName  = document.getElementById('previewName');
+  const previewSize  = document.getElementById('previewSize');
+  const clearBtn     = document.getElementById('clearBtn');
+  const analyseBtn   = document.getElementById('analyseBtn');
+  const errorBox     = document.getElementById('errorBox');
+  const results      = document.getElementById('results');
+
+  let selectedFile = null;
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) loadFile(f);
+  });
+
+  function loadFile(file) {
+    selectedFile = file;
+    previewThumb.src        = URL.createObjectURL(file);
+    previewName.textContent = file.name;
+    previewSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+    previewStrip.classList.add('show');
+    analyseBtn.disabled = false;
+    results.classList.remove('show');
+    errorBox.classList.remove('show');
+  }
+
+  clearBtn.addEventListener('click', () => {
+    selectedFile = null;
+    fileInput.value = '';
+    previewStrip.classList.remove('show');
+    analyseBtn.disabled = true;
+    results.classList.remove('show');
+    errorBox.classList.remove('show');
+  });
+
+  analyseBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    analyseBtn.classList.add('loading');
+    analyseBtn.disabled = true;
+    errorBox.classList.remove('show');
+    results.classList.remove('show');
+
+    const fd = new FormData();
+    fd.append('image', selectedFile);
+
+    try {
+      const res  = await fetch('/predict', { method: 'POST', body: fd });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); }
+      catch { throw new Error('Server error — check terminal for details.'); }
+      if (data.error) throw new Error(data.error);
+      render(data);
+    } catch (err) {
+      errorBox.textContent = '⚠  ' + err.message;
+      errorBox.classList.add('show');
+    } finally {
+      analyseBtn.classList.remove('loading');
+      analyseBtn.disabled = false;
+    }
+  });
+
+  function render(d) {
+    const isAuth = d.result === 'Authentic';
+
+    document.getElementById('imgOrig').src     = d.original;
+    document.getElementById('imgAnalysis').src = isAuth ? d.original : (d.heatmap || d.original);
+
+    document.getElementById('rightDot').style.background = isAuth ? 'var(--green)' : 'var(--red)';
+    document.getElementById('rightLabel').textContent     = isAuth ? 'No tampering detected' : 'Tampered regions highlighted';
+
+    const vCard = document.getElementById('vCard');
+    vCard.className = 'verdict-card ' + (isAuth ? 'authentic' : 'forged');
+    document.getElementById('vEmoji').textContent = isAuth ? '✅' : '⚠️';
+    document.getElementById('vTitle').textContent = isAuth ? 'Authentic' : 'Forged';
+    document.getElementById('vSub').textContent   = isAuth
+      ? 'No signs of manipulation were found in this image.'
+      : `${d.forgery_type} detected. Red overlay shows the likely tampered regions.`;
+
+    document.getElementById('sConf').textContent = d.confidence + '%';
+    document.getElementById('sConf').className   = 's-val ' + (isAuth ? 'green' : 'red');
+    document.getElementById('sType').textContent = d.forgery_type || '—';
+    document.getElementById('sType').className   = 's-val ' + (isAuth ? 'green' : 'amber');
+    document.getElementById('sTime').textContent = d.inference_ms + ' ms';
+
+    results.classList.add('show');
+    setTimeout(() => results.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+  }
+</script>
+</body>
+</html>
